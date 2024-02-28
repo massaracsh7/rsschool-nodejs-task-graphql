@@ -17,6 +17,24 @@ export const memberType = new GraphQLObjectType({
   }),
 });
 
+export const profileType = new GraphQLObjectType({
+  name: 'Profile',
+  fields: () => ({
+    id: { type: new GraphQLNonNull(GraphQLString) },
+    isMale: { type: GraphQLBoolean },
+    yearOfBirth: { type: GraphQLInt },
+    userId: { type: GraphQLString }, // Assuming userId is of type String in your schema
+    memberTypeId: { type: memberTypeIdEnum }, // Assuming memberTypeIdEnum is already defined
+  }),
+});
+
+export const profileTypeIdEnum = new GraphQLEnumType({
+  name: 'ProfileTypeId',
+  values: {
+    UUID: { value: 'uuid' }, // Assuming format 'uuid' maps to UUID
+  },
+});
+
 
 const queryType = new GraphQLObjectType({
   name: 'Query',
@@ -27,7 +45,12 @@ const queryType = new GraphQLObjectType({
         return await context.prisma.memberType.findMany();
       },
     },
-
+    profileTypes: {
+      type: new GraphQLList(profileType),
+      async resolve(parent, args, context ) {
+        return await context.prisma.profile.findMany();
+      },
+    },
   },
 });
 
