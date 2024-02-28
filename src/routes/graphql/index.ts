@@ -1,12 +1,23 @@
 import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { createGqlResponseSchema, gqlResponseSchema } from './schemas.js';
-import { GraphQLBoolean, GraphQLEnumType, GraphQLFloat, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLSchema, GraphQLString, graphql } from 'graphql';
+import { GraphQLBoolean, GraphQLEnumType, GraphQLFloat, GraphQLInputObjectType, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLSchema, GraphQLString, graphql } from 'graphql';
 import { PrismaClient } from '@prisma/client';
-
+import { UUIDType } from './types/uuid.js';
 enum MemberTypeId {
   BASIC = 'basic',
   BUSINESS = 'business',
 }
+
+
+const memberTypeIdEnum = new GraphQLEnumType({
+  name: 'MemberTypeId',
+  values: {
+    [MemberTypeId.BASIC]: { value: MemberTypeId.BASIC },
+    [MemberTypeId.BUSINESS]: { value: MemberTypeId.BUSINESS },
+  },
+});
+
+
 
 export const memberType = new GraphQLObjectType({
   name: 'Member',
@@ -34,7 +45,27 @@ export const profileTypeIdEnum = new GraphQLEnumType({
     UUID: { value: 'uuid' }, // Assuming format 'uuid' maps to UUID
   },
 });
+export const postType = new GraphQLObjectType({
+  name: 'Post',
+  fields: () => ({
+    id: { type: new GraphQLNonNull(GraphQLString) },
+    title: { type: GraphQLString },
+    content: { type: GraphQLString },
+    authorId: { type: GraphQLString },
+  }),
+});
 
+// Define the GraphQL enum type for post formats
+export const postFormatEnum = new GraphQLEnumType({
+  name: 'PostFormat',
+  values: {
+    UUID: { value: 'uuid' },
+  },
+});
+
+interface MyContext {
+  prisma: PrismaClient;
+}
 
 const queryType = new GraphQLObjectType({
   name: 'Query',
@@ -45,26 +76,60 @@ const queryType = new GraphQLObjectType({
         return await context.prisma.memberType.findMany();
       },
     },
-    profileTypes: {
+    profiles: {
       type: new GraphQLList(profileType),
       async resolve(parent, args, context ) {
         return await context.prisma.profile.findMany();
       },
     },
+    posts: {
+      type: new GraphQLList(postType),
+      async resolve(parent, args, context) {
+        return await context.prisma.post.findMany();
+      },
+    },
+    memberType: {
+      type: memberType,
+      args: {
+        id: { type: new GraphQLNonNull(memberTypeIdEnum) },
+      },
+      async resolve(parent, args: { id: string }, context) {
+        const memberType = await context.prisma.memberType.findUnique({
+          where: { id: args.id },
+        });
+        return memberType;
+      },
+    },
+    post: {
+      type: postType,
+      args: {
+        id: { type: new GraphQLNonNull(UUIDType) },
+      },
+      async resolve(parent, args: { id: string }, context) {
+        const post = await context.prisma.post.findUnique({
+          where: { id: args.id },
+        });
+        return post;
+      },
+    },
+    profile: {
+      type: profileType,
+      args: {
+        id: { type: new GraphQLNonNull(UUIDType) },
+      },
+      async resolve(parent, args: { id: string }, context) {
+        const profile = await context.prisma.profile.findUnique({
+          where: { id: args.id },
+        });
+        return profile;
+      },
+    },
   },
 });
-
-const memberTypeIdEnum = new GraphQLEnumType({
-  name: 'MemberTypeId',
-  values: {
-    [MemberTypeId.BASIC]: { value: MemberTypeId.BASIC },
-    [MemberTypeId.BUSINESS]: { value: MemberTypeId.BUSINESS },
-  },
-});
-
 
 const schema = new GraphQLSchema({
   query: queryType,
+  types: [memberType, postType, profileType],
 });
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
