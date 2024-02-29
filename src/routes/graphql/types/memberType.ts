@@ -1,10 +1,12 @@
-import {  GraphQLEnumType, GraphQLFloat, GraphQLInt,  GraphQLNonNull, GraphQLObjectType } from 'graphql';
-
-export enum MemberTypeId {
-  BASIC = 'basic',
-  BUSINESS = 'business',
-}
-
+import graphql from 'graphql';
+import { MemberTypeId } from '../../member-types/schemas.js';
+const {
+  GraphQLObjectType,
+  GraphQLInt,
+  GraphQLNonNull,
+  GraphQLFloat,
+  GraphQLEnumType,
+} = graphql;
 
 export const memberTypeIdEnum = new GraphQLEnumType({
   name: 'MemberTypeId',
@@ -13,8 +15,6 @@ export const memberTypeIdEnum = new GraphQLEnumType({
     [MemberTypeId.BUSINESS]: { value: MemberTypeId.BUSINESS },
   },
 });
-
-
 
 export const memberType = new GraphQLObjectType({
   name: 'Member',

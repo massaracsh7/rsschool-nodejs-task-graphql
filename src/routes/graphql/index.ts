@@ -1,31 +1,43 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
-import { createGqlResponseSchema, gqlResponseSchema } from './schemas.js';
-import { GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLSchema, graphql } from 'graphql';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient} from '@prisma/client';
 import { UUIDType } from './types/uuid.js';
 import { memberType, memberTypeIdEnum } from './types/memberType.js';
-import { profileType } from './types/profileType.js';
 import { postType } from './types/postType.js';
+import { userType } from './types/userType.js';
+import { profileType } from './types/profileType.js';
+import {
+  GraphQLObjectType,
+  GraphQLList,
+  GraphQLNonNull,
+  GraphQLSchema
+} from 'graphql';
+import { graphql } from 'graphql';
+import { createGqlResponseSchema, gqlResponseSchema } from './schemas.js';
 
-const queryType = new GraphQLObjectType({
-  name: 'Query',
+const Query = new GraphQLObjectType({
+  name: 'QueryType',
   fields: {
     memberTypes: {
       type: new GraphQLList(memberType),
-      resolve: (parent, args, context: { prisma: PrismaClient }) => {
-        return context.prisma.memberType.findMany();
-      },
-    },
-    profiles: {
-      type: new GraphQLList(profileType),
-      resolve: (parent, args, context) => {
-        return context.prisma.profile.findMany();
+      resolve(parent, args, context: { prisma: PrismaClient }) {
+        const result = context.prisma.memberType.findMany();
+        return result;
       },
     },
     posts: {
       type: new GraphQLList(postType),
-      resolve: (parent, args, context) => {
-        return context.prisma.post.findMany();
+      resolve(parent, args, context: { prisma: PrismaClient }) {
+        const result = context.prisma.post.findMany();
+        return result;
+      },
+    },
+
+    profiles: {
+      type: new GraphQLList(profileType),
+      resolve(parent, args, context: { prisma: PrismaClient }) {
+        const result = context.prisma.profile.findMany();
+        return result;
       },
     },
     memberType: {
@@ -33,10 +45,11 @@ const queryType = new GraphQLObjectType({
       args: {
         id: { type: new GraphQLNonNull(memberTypeIdEnum) },
       },
-      resolve: async (parent, args: { id: string }, context) => {
-        return await context.prisma.memberType.findUnique({
+      async resolve(_, args: { id: string }, context) {
+        const result = await context.prisma.memberType.findUnique({
           where: { id: args.id },
         });
+        return result;
       },
     },
     post: {
@@ -44,10 +57,11 @@ const queryType = new GraphQLObjectType({
       args: {
         id: { type: new GraphQLNonNull(UUIDType) },
       },
-      resolve: async (parent, args: { id: string }, context) => {
-        return await context.prisma.post.findUnique({
+      async resolve(_, args: { id: string }, context) {
+        const result = await context.prisma.post.findUnique({
           where: { id: args.id },
         });
+        return result;
       },
     },
     profile: {
@@ -55,18 +69,39 @@ const queryType = new GraphQLObjectType({
       args: {
         id: { type: new GraphQLNonNull(UUIDType) },
       },
-      resolve: async (parent, args: { id: string }, context) => {
-        return await context.prisma.profile.findUnique({
+      async resolve(_, args: { id: string }, context) {
+        const result = await context.prisma.profile.findUnique({
           where: { id: args.id },
         });
+        return result;
       },
     },
+    users: {
+      type: new GraphQLList(userType),
+      async resolve(parent, args, context: { prisma: PrismaClient }) {
+        const result = await context.prisma.user.findMany();
+        return result;
+      },
+    },
+    user: {
+      type: userType,
+      args: {
+        id: { type: new GraphQLNonNull(UUIDType) },
+      },
+      async resolve(_, args: { id: string }, context) {
+        const result = await context.prisma.user.findUnique({
+          where: { id: args.id },
+        });
+        return result;
+      },
+    },
+
   },
 });
 
 const schema = new GraphQLSchema({
-  query: queryType,
-  types: [memberType, postType, profileType],
+  query: Query,
+  types: [memberType, postType, profileType, userType],
 });
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {

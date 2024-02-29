@@ -1,4 +1,7 @@
-import { GraphQLBoolean, GraphQLEnumType, GraphQLInt, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
+import { GraphQLBoolean, GraphQLEnumType, GraphQLInputObjectType, GraphQLInt, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
+import { memberType, memberTypeIdEnum } from './memberType.js';
+import { UUIDType } from './uuid.js';
+import { PrismaClient } from '@prisma/client';
 
 export const profileType = new GraphQLObjectType({
   name: 'Profile',
@@ -6,14 +9,40 @@ export const profileType = new GraphQLObjectType({
     id: { type: new GraphQLNonNull(GraphQLString) },
     isMale: { type: GraphQLBoolean },
     yearOfBirth: { type: GraphQLInt },
-    userId: { type: GraphQLString }, // Assuming userId is of type String in your schema
-    profileTypeId: { type: profileTypeIdEnum }, // Assuming memberTypeIdEnum is already defined
+    userId: { type: GraphQLString },
+    memberType: {
+      type: memberType,
+      async resolve(profile: { memberTypeId: string }, _, context: { prisma: PrismaClient }) {
+        const result = await context.prisma.memberType.findFirst({
+          where: { id: profile.memberTypeId },
+        });
+        return result;
+      }},
   }),
 });
 
 export const profileTypeIdEnum = new GraphQLEnumType({
   name: 'ProfileTypeId',
   values: {
-    UUID: { value: 'uuid' }, // Assuming format 'uuid' maps to UUID
+    UUID: { value: 'uuid' },
   },
+});
+
+export const CreateProfileInput = new GraphQLInputObjectType({
+  name: 'CreateProfileInput',
+  fields: () => ({
+    isMale: { type: GraphQLBoolean },
+    yearOfBirth: { type: GraphQLInt },
+    memberTypeId: { type: memberTypeIdEnum },
+    userId: { type: UUIDType },
+  }),
+});
+
+export const ChangeProfileInput = new GraphQLInputObjectType({
+  name: 'ChangeProfileInput',
+  fields: () => ({
+    isMale: { type: GraphQLBoolean },
+    yearOfBirth: { type: GraphQLInt },
+    memberTypeId: { type: memberTypeIdEnum },
+  }),
 });
