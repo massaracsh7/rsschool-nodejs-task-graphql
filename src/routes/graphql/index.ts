@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { memberType } from './types/memberType.js';
 import {
-  GraphQLObjectType, GraphQLSchema
+  GraphQLObjectType, GraphQLSchema, parse, validate
 } from 'graphql';
 import { graphql } from 'graphql';
 import { createGqlResponseSchema, gqlResponseSchema } from './schemas.js';
@@ -10,6 +9,7 @@ import { UserResolver, PostResolver, ProfileResolver, MemberTypeResolver } from 
 import { postType } from './types/postType.js';
 import { profileType } from './types/profileType.js';
 import { userType } from './types/userType.js';
+import depthLimit from 'graphql-depth-limit';
 
 const Query = new GraphQLObjectType({
   name: 'Query',
@@ -37,8 +37,6 @@ const schema = new GraphQLSchema({
 });
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-  const { prisma } = fastify;
-
   fastify.route({
     url: '/',
     method: 'POST',
@@ -50,13 +48,18 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async handler(req) {
       const { query, variables } = req.body;
-      const result = await graphql({
-        schema,
-        source: query,
-        contextValue: { prisma },
-        variableValues: variables,
-      });
-      return result;
+      const ast = parse(query);
+      const validationErrors = validate(schema, ast, [depthLimit(5)]);
+      if (validationErrors.length > 0) {
+        return { errors: validationErrors };
+      } else {
+        return graphql({
+          schema,
+          source: query,
+          variableValues: variables,
+          contextValue: fastify,
+        });
+      }
     },
   });
 };
