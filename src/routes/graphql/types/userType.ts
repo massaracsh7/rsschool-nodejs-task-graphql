@@ -77,3 +77,17 @@ export const ChangeUserInput = new GraphQLInputObjectType({
     balance: { type: GraphQLFloat },
   }),
 });
+
+export interface User {
+  id: string;
+  name: string;
+  balance: number;
+  userSubscribedTo: [{
+    subscriberId: string;
+    authorId: string;
+  }];
+  subscribedToUser: [{
+    subscriberId: string;
+    authorId: string;
+  }];
+}

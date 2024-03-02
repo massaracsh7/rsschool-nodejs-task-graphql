@@ -46,3 +46,10 @@ export const ChangeProfileInput = new GraphQLInputObjectType({
     memberTypeId: { type: memberTypeIdEnum },
   }),
 });
+export interface Profile {
+  id: string;
+  isMale: boolean;
+  yearOfBirth: number;
+  userId: string;
+  memberTypeId: string;
+}

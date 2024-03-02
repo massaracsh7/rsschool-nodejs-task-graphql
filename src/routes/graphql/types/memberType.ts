@@ -24,3 +24,9 @@ export const memberType = new GraphQLObjectType({
     postsLimitPerMonth: { type: GraphQLInt },
   }),
 });
+
+export interface Member {
+  id: string;
+  discount: number;
+  postsLimitPerMonth: number;
+}
