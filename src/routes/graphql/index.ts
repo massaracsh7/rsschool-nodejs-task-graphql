@@ -4,7 +4,7 @@ import { graphql } from 'graphql';
 import depthLimit from 'graphql-depth-limit';
 import { createGqlResponseSchema, gqlResponseSchema } from './schemas.js';
 import { UserResolver, PostResolver, ProfileResolver, MemberTypeResolver } from './resolvers.js';
-import { initializeDataLoaders } from './loader.js';
+import { initDataLoaders } from './loader.js';
 import { memberType } from './types/memberType.js';
 import { postType } from './types/postType.js';
 import { profileType } from './types/profileType.js';
@@ -32,11 +32,12 @@ const schema = new GraphQLSchema({
   types: [memberType, postType, profileType, userType]
 });
 
-const prisma = new PrismaClient();
-
-const dataLoaders = initializeDataLoaders(prisma);
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
+
+  const prisma = new PrismaClient();
+
+  const dataLoaders = initDataLoaders(prisma);
   fastify.route({
     url: '/',
     method: 'POST',
@@ -57,7 +58,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           schema,
           source: query,
           variableValues: variables,
-          contextValue: { ...fastify, dataLoaders },
+          contextValue: { prisma, ...dataLoaders },
         });
       }
     },
