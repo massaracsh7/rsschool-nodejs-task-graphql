@@ -1,40 +1,40 @@
 import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
-import { memberType } from './types/memberType.js';
-import {
-  GraphQLObjectType, GraphQLSchema, parse, validate
-} from 'graphql';
+import { GraphQLObjectType, GraphQLSchema, parse, validate } from 'graphql';
 import { graphql } from 'graphql';
+import depthLimit from 'graphql-depth-limit';
 import { createGqlResponseSchema, gqlResponseSchema } from './schemas.js';
 import { UserResolver, PostResolver, ProfileResolver, MemberTypeResolver } from './resolvers.js';
+import { initializeDataLoaders } from './loader.js';
+import { memberType } from './types/memberType.js';
 import { postType } from './types/postType.js';
 import { profileType } from './types/profileType.js';
 import { userType } from './types/userType.js';
-import depthLimit from 'graphql-depth-limit';
-
-const Query = new GraphQLObjectType({
-  name: 'Query',
-  fields: {
-    ...UserResolver.Query,
-    ...PostResolver.Query,
-    ...ProfileResolver.Query,
-    ...MemberTypeResolver.Query
-  }
-});
-
-const Mutation = new GraphQLObjectType({
-  name: 'Mutation',
-  fields: {
-    ...UserResolver.Mutation,
-    ...PostResolver.Mutation,
-    ...ProfileResolver.Mutation
-  }
-});
+import { PrismaClient } from '@prisma/client';
 
 const schema = new GraphQLSchema({
-  query: Query,
-  mutation: Mutation,
-  types: [memberType, postType, profileType, userType],
+  query: new GraphQLObjectType({
+    name: 'Query',
+    fields: {
+      ...UserResolver.Query,
+      ...PostResolver.Query,
+      ...ProfileResolver.Query,
+      ...MemberTypeResolver.Query
+    }
+  }),
+  mutation: new GraphQLObjectType({
+    name: 'Mutation',
+    fields: {
+      ...UserResolver.Mutation,
+      ...PostResolver.Mutation,
+      ...ProfileResolver.Mutation
+    }
+  }),
+  types: [memberType, postType, profileType, userType]
 });
+
+const prisma = new PrismaClient();
+
+const dataLoaders = initializeDataLoaders(prisma);
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.route({
@@ -57,7 +57,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           schema,
           source: query,
           variableValues: variables,
-          contextValue: fastify,
+          contextValue: { ...fastify, dataLoaders },
         });
       }
     },

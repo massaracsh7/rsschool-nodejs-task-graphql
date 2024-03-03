@@ -12,7 +12,7 @@ export const UserResolver = {
   Query: {
     users: {
       type: new GraphQLList(userType),
-      async resolve(_, context: { prisma: PrismaClient }) {
+      async resolve(parent, args, context: { prisma: PrismaClient }) {
         return await context.prisma.user.findMany();
       },
     },
@@ -100,7 +100,7 @@ export const PostResolver = {
   Query: {
     posts: {
       type: new GraphQLList(postType),
-      resolve(_, context: { prisma: PrismaClient }) {
+      resolve(parent, args, context: { prisma: PrismaClient }) {
         return context.prisma.post.findMany();
       },
     },
@@ -155,7 +155,7 @@ export const ProfileResolver = {
   Query: {
     profiles: {
       type: new GraphQLList(profileType),
-      resolve(_, context: { prisma: PrismaClient }) {
+      resolve(parent, args, context: { prisma: PrismaClient }) {
         return context.prisma.profile.findMany();
       },
     },
@@ -210,7 +210,7 @@ export const MemberTypeResolver = {
   Query: {
     memberTypes: {
       type: new GraphQLList(memberType),
-      resolve(_, context: { prisma: PrismaClient }) {
+      resolve(parent, args, context: { prisma: PrismaClient }) {
         return context.prisma.memberType.findMany();
       },
     },
