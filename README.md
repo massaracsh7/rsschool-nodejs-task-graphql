@@ -16,6 +16,17 @@ Constraints and logic for gql queries should be done based on restful implementa
    To determine if a user is a sub you need to do the appropriate join ([include](https://www.prisma.io/docs/reference/api-reference/prisma-client-reference#include)).  
    But only do a join when you need it. You can use [graphql-parse-resolve-info](https://github.com/graphile/graphile-engine/tree/master/packages/graphql-parse-resolve-info) package to parse GraphQLResolveInfo to determine if subs are expected in the response.  
 
+
+P.S. - If the tests fail to load and you get
+   exitCode: null  signal: SIGTERM test: TAP env: TS_NODE_COMPILER_OPTIONS: "{}" timeout: 30000. Or something similar.
+The timeout for tap may work for you. Please, you can disable timeout for tests by changing the scripts in package.json to
+  "test-queries": "npm run build:ts && tap --timeout=0 --jobs=1 --ts \"test/routes/gql-queries.test.ts\"",
+  "test-mutations": "npm run build:ts && tap --timeout=0 --jobs=1 --ts \"test/routes/gql-mutations.test.ts\"",
+  "test-rule": "npm run build:ts && tap --timeout=0 --jobs=1 --ts \"test/routes/gql-rule.test.ts\"",
+  "test-loader": "npm run build:ts && tap --timeout=0 --jobs=1 --ts \"test/routes/gql-loader.test.ts\"",
+  "test-loader-prime": "npm run build:ts && tap --timeout=0 --jobs=1 --ts \"test/routes/gql-loader-prime.test.ts\"",
+Thank you very much.
+
 ### Info:  
 It is forbidden to add new npm dependencies.  
 You should only modify/add the code inside the folder ./src/routes/graphql.  
