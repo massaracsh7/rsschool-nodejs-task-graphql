@@ -1,19 +1,42 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { GraphQLList, GraphQLNonNull, GraphQLBoolean } from 'graphql';
+import { GraphQLList, GraphQLNonNull, GraphQLBoolean, GraphQLResolveInfo } from 'graphql';
 import { PrismaClient, Post, Profile, User } from '@prisma/client';
-import { ChangeUserInput, CreateUserInput, userType } from './types/userType.js';
+import { ChangeUserInput, CreateUserInput, UserInt, userType } from './types/userType.js';
 import { UUIDType } from './types/uuid.js';
 import { ChangePostInput, CreatePostInput, postType } from './types/postType.js';
 import { ChangeProfileInput, CreateProfileInput, profileType } from './types/profileType.js';
 import { memberType, memberTypeIdEnum } from './types/memberType.js';
+import { ContextInt } from './loader.js';
+import { ResolveTree, parseResolveInfo, simplifyParsedResolveInfoFragmentWithType } from 'graphql-parse-resolve-info';
 
 
 export const UserResolver = {
   Query: {
     users: {
       type: new GraphQLList(userType),
-      async resolve(parent, args, context: { prisma: PrismaClient }) {
-        return await context.prisma.user.findMany();
+      resolve: async (
+        _parent,
+        _,
+        { prisma, usersLoader }: ContextInt,
+        info: GraphQLResolveInfo,
+      ) => {
+        const parsedResolveInfo = parseResolveInfo(info);
+        const { fields } = simplifyParsedResolveInfoFragmentWithType(
+          parsedResolveInfo as ResolveTree,
+          new GraphQLList(userType)
+        );
+        const isUserSubscribedTo: boolean = 'userSubscribedTo' in fields;
+        const isSubscribedToUser: boolean = 'subscribedToUser' in fields;
+        const users = await prisma.user.findMany({
+          include: {
+            userSubscribedTo: isUserSubscribedTo,
+            subscribedToUser: isSubscribedToUser,
+          }
+        });
+        users.forEach((user) => {
+          usersLoader.prime(user.id, user);
+        });
+        return users;
       },
     },
     user: {
@@ -21,10 +44,8 @@ export const UserResolver = {
       args: {
         id: { type: new GraphQLNonNull(UUIDType) },
       },
-      async resolve(_, args: { id: string }, context: { prisma: PrismaClient }) {
-        return context.prisma.user.findFirst({
-          where: { id: args.id },
-        });
+      resolve: async (_parent, { id }: UserInt, { usersLoader }: ContextInt) => {
+        return await usersLoader.load(id);
       },
     },
   },

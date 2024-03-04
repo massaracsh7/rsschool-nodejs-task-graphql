@@ -9,7 +9,6 @@ import { memberType } from './types/memberType.js';
 import { postType } from './types/postType.js';
 import { profileType } from './types/profileType.js';
 import { userType } from './types/userType.js';
-import { PrismaClient } from '@prisma/client';
 
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
@@ -32,11 +31,9 @@ const schema = new GraphQLSchema({
   types: [memberType, postType, profileType, userType]
 });
 
-
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
-  const prisma = new PrismaClient();
-
+  const { prisma } = fastify;
   const dataLoaders = initDataLoaders(prisma);
   fastify.route({
     url: '/',
@@ -49,8 +46,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async handler(req) {
       const { query, variables } = req.body;
-      const ast = parse(query);
-      const validationErrors = validate(schema, ast, [depthLimit(5)]);
+      const par = parse(query);
+      const validationErrors = validate(schema, par, [depthLimit(5)]);
       if (validationErrors.length > 0) {
         return { errors: validationErrors };
       } else {

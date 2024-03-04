@@ -1,8 +1,9 @@
 import { GraphQLFloat, GraphQLInputObjectType, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
 import { UUIDType } from './uuid.js';
-import { profileType } from './profileType.js';
-import { PrismaClient } from '@prisma/client';
-import { postType } from './postType.js';
+import { Profile, profileType } from './profileType.js';
+import { PostInt, postType } from './postType.js';
+import { ContextInt } from '../loader.js';
+import { SubscribersOnAuthors } from '@prisma/client';
 
 export const userType = new GraphQLObjectType({
   name: 'User',
@@ -12,52 +13,29 @@ export const userType = new GraphQLObjectType({
     balance: { type: GraphQLFloat },
     posts: {
       type: new GraphQLList(postType),
-      async resolve(user: { id: string }, _, context: { prisma: PrismaClient }) {
-        const result = await context.prisma.post.findMany({
-          where: { authorId: user.id },
-        });
-        return result;
-      },
+      resolve: async ({ id }: UserInt, _, { postsLoader }: ContextInt) => {
+        const result = await postsLoader.load(id);
+        return  [result];
+      }
     },
     profile: {
       type: profileType,
-      async resolve(user: { id: string }, _, context: { prisma: PrismaClient }) {
-        const result = await context.prisma.profile.findFirst({
-          where: { userId: user.id },
-        });
-        return result;
-      },
+      resolve: async ({ id }: UserInt, _, { profileLoader }: ContextInt) => {
+        return await profileLoader.load(id);
+      }
     },
     userSubscribedTo: {
       type: new GraphQLList(userType),
-      async resolve(user: { id: string }, _, context: { prisma: PrismaClient }) {
-        const arr = await context.prisma.subscribersOnAuthors.findMany({
-          where: { subscriberId: user.id },
-        });
-        const result = await context.prisma.user.findMany({
-          where: {
-            id: {
-              in: arr.map((user) => user.authorId),
-            },
-          },
-        });
-        return result;
+      resolve: async ({ id }: UserInt, _, { subscribedToLoader }: ContextInt) => {
+        const result = await subscribedToLoader.load(id);
+        return [result];
       },
     },
     subscribedToUser: {
       type: new GraphQLList(userType),
-      async resolve(user: { id: string }, _, context: { prisma: PrismaClient }) {
-        const arr = await context.prisma.subscribersOnAuthors.findMany({
-          where: { authorId: user.id },
-        });
-        const result = await context.prisma.user.findMany({
-          where: {
-            id: {
-              in: arr.map((user) => user.subscriberId),
-            },
-          },
-        });
-        return result;
+      resolve: async ({ id }: UserInt, _, { subscribersLoader }: ContextInt) => {
+        const result = await subscribersLoader.load(id);
+        return [result];
       },
     },
   }),
@@ -78,16 +56,17 @@ export const ChangeUserInput = new GraphQLInputObjectType({
   }),
 });
 
-export interface User {
+export interface UserInt {
   id: string;
   name: string;
   balance: number;
-  userSubscribedTo: [{
-    subscriberId: string;
-    authorId: string;
-  }];
-  subscribedToUser: [{
-    subscriberId: string;
-    authorId: string;
-  }];
+  profile: Profile;
+  posts: PostInt[];
+  userSubscribedTo: SubscribersOnAuthors[];
+  subscribedToUser: SubscribersOnAuthors[];
+}
+
+export interface Subscribe {
+  userId: string,
+  authorId: string,
 }

@@ -27,7 +27,7 @@ export const ChangePostInput = new GraphQLInputObjectType({
   }),
 });
 
-export interface Post {
+export interface PostInt {
   id: string;
   title: string;
   content: string;
