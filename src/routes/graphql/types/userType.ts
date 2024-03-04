@@ -15,7 +15,7 @@ export const userType = new GraphQLObjectType({
       type: new GraphQLList(postType),
       resolve: async ({ id }: UserInt, _, { postsLoader }: ContextInt) => {
         const result = await postsLoader.load(id);
-        return  [result];
+        return [result];
       }
     },
     profile: {
@@ -26,15 +26,23 @@ export const userType = new GraphQLObjectType({
     },
     userSubscribedTo: {
       type: new GraphQLList(userType),
-      resolve: async ({ id }: UserInt, _, { subscribedToLoader }: ContextInt) => {
-        const result = await subscribedToLoader.load(id);
+      resolve: async (source: UserInt, _, { subscribedToLoader }: ContextInt) => {
+        if (source.userSubscribedTo) {
+          const authorsId = source.userSubscribedTo.map((user) => user.authorId);
+          return await subscribedToLoader.loadMany(authorsId);
+        }
+        const result = await subscribedToLoader.load(source.id);
         return [result] ?? [];
       },
     },
     subscribedToUser: {
       type: new GraphQLList(userType),
-      resolve: async ({ id }: UserInt, _, { subscribersLoader }: ContextInt) => {
-        const result = await subscribersLoader.load(id);
+      resolve: async (source: UserInt, _, { subscribersLoader }: ContextInt) => {
+        if (source.subscribedToUser) {
+          const subscriberId = source.subscribedToUser.map((user) => user.subscriberId);
+          return await subscribersLoader.loadMany(subscriberId);
+        }
+        const result = await subscribersLoader.load(source.id);
         return [result] ?? [];
       },
     },
