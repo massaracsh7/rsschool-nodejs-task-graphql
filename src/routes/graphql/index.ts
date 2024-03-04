@@ -25,7 +25,8 @@ const schema = new GraphQLSchema({
     fields: {
       ...UserResolver.Mutation,
       ...PostResolver.Mutation,
-      ...ProfileResolver.Mutation
+      ...ProfileResolver.Mutation,
+      unsubscribeFrom: UserResolver.Mutation.unsubscribeFrom
     }
   }),
   types: [memberType, postType, profileType, userType]

@@ -17,7 +17,7 @@ export const UserResolver = {
       resolve: async (
         _parent,
         _,
-        { prisma, usersLoader }: ContextInt,
+        { prisma }: ContextInt,
         info: GraphQLResolveInfo,
       ) => {
         const parsedResolveInfo = parseResolveInfo(info);
@@ -25,16 +25,13 @@ export const UserResolver = {
           parsedResolveInfo as ResolveTree,
           new GraphQLList(userType)
         );
-        const isUserSubscribedTo: boolean = 'userSubscribedTo' in fields;
-        const isSubscribedToUser: boolean = 'subscribedToUser' in fields;
+        const res1 = 'userSubscribedTo' in fields;
+        const res2 = 'subscribedToUser' in fields;
         const users = await prisma.user.findMany({
           include: {
-            userSubscribedTo: isUserSubscribedTo,
-            subscribedToUser: isSubscribedToUser,
+            userSubscribedTo: res1,
+            subscribedToUser: res2,
           }
-        });
-        users.forEach((user) => {
-          usersLoader.prime(user.id, user);
         });
         return users;
       },
@@ -85,7 +82,7 @@ export const UserResolver = {
       type: userType,
       args: { userId: { type: UUIDType }, authorId: { type: UUIDType } },
       async resolve(_, args: { userId: string; authorId: string }, context: { prisma: PrismaClient }) {
-        return await context.prisma.user.update({
+        return context.prisma.user.update({
           where: {
             id: args.userId,
           },
@@ -101,20 +98,37 @@ export const UserResolver = {
     },
     unsubscribeFrom: {
       type: GraphQLBoolean,
-      args: { userId: { type: UUIDType }, authorId: { type: UUIDType } },
-      async resolve(_, args: { userId: string; authorId: string }, context: { prisma: PrismaClient }) {
-        await context.prisma.subscribersOnAuthors.delete({
-          where: {
-            subscriberId_authorId: {
-              subscriberId: args.userId,
-              authorId: args.authorId,
-            },
-          },
-        });
-        return true;
+      args: {
+        userId: { type: new GraphQLNonNull(UUIDType) },
+        authorId: { type: new GraphQLNonNull(UUIDType) },
       },
-    },
-  }
+      resolve: async (_, args: { userId: string; authorId: string }, context: { prisma: PrismaClient }) => {
+        try {
+          const subscriptions = await context.prisma.subscribersOnAuthors.findMany({
+            where: {
+              subscriberId: args.userId,
+              authorId: args.authorId
+            }
+          });
+
+          await Promise.all(subscriptions.map((subscription) =>
+            context.prisma.subscribersOnAuthors.delete({
+              where: {
+                subscriberId_authorId: {
+                  subscriberId: subscription.subscriberId,
+                  authorId: subscription.authorId
+                }
+              }
+            })
+          ));
+
+          return true;
+        } catch (error) {
+          return false;
+        }
+      },
+    }
+  },
 };
 
 export const PostResolver = {

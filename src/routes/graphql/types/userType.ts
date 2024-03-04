@@ -28,14 +28,14 @@ export const userType = new GraphQLObjectType({
       type: new GraphQLList(userType),
       resolve: async ({ id }: UserInt, _, { subscribedToLoader }: ContextInt) => {
         const result = await subscribedToLoader.load(id);
-        return [result];
+        return [result] ?? [];
       },
     },
     subscribedToUser: {
       type: new GraphQLList(userType),
       resolve: async ({ id }: UserInt, _, { subscribersLoader }: ContextInt) => {
         const result = await subscribersLoader.load(id);
-        return [result];
+        return [result] ?? [];
       },
     },
   }),
